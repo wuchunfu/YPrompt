@@ -374,6 +374,7 @@
               <VersionHistoryContent
                 v-if="prompt"
                 :prompt-id="prompt.id"
+                @rollback="(versionNumber) => emit('rollback', versionNumber)"
               />
             </div>
           </div>
@@ -419,6 +420,7 @@ const emit = defineEmits<{
   close: []
   edit: [prompt: Prompt]
   optimize: [prompt: Prompt]
+  rollback: [versionNumber: string]
 }>()
 
 const isOpen = computed(() => !!props.prompt)

@@ -95,6 +95,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const emit = defineEmits<{
+  rollback: [versionNumber: string]
+}>()
 
 const notificationStore = useNotificationStore()
 
@@ -139,6 +142,7 @@ const handleRollback = async (version: VersionInfo) => {
 
     if (result.code === 200) {
       notificationStore.success(`成功回滚到版本 v${version.version_number}`)
+      emit('rollback', version.version_number)
       loadVersions()
       showDetailModal.value = false
     } else {

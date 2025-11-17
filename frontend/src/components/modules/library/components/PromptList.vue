@@ -215,6 +215,7 @@
       @close="showDetailModal = false"
       @edit="handlePromptUpdated"
       @optimize="handleOptimizePrompt"
+      @rollback="handleVersionRollback"
     />
 
     <VersionHistoryPanel
@@ -231,7 +232,6 @@
 import { ref, onMounted, computed, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNavigationStore } from '@/stores/navigationStore'
-import { useNotificationStore } from '@/stores/notificationStore'
 import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 import PromptDetailModal from './PromptDetailModal.vue'
 import VersionHistoryPanel from './VersionHistoryPanel.vue'
@@ -267,7 +267,6 @@ interface Prompt {
 
 const router = useRouter()
 const navigationStore = useNavigationStore()
-const notificationStore = useNotificationStore()
 
 // API配置
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -492,8 +491,8 @@ const handleShowVersionHistory = (prompt: Prompt) => {
 }
 
 // 处理版本回滚完成
-const handleVersionRollback = (newVersion: string) => {
-  notificationStore.success(`版本已回滚到 v${newVersion}`)
+const handleVersionRollback = () => {
+  // 不显示通知，版本组件已经显示过了
   loadPrompts()
 }
 
