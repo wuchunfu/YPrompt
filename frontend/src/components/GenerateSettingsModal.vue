@@ -5,7 +5,7 @@
     v-if="settingsStore.showSettings"
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
   >
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+    <div class="bg-white rounded-lg max-w-4xl w-full h-[90vh] flex flex-col overflow-hidden">
       <div class="flex items-center justify-between p-6 border-b flex-shrink-0">
         <div class="flex items-center space-x-4">
           <h2 class="text-xl font-semibold">设置</h2>
@@ -42,7 +42,7 @@
         </button>
       </div>
 
-      <div class="p-6 overflow-y-auto flex-1">
+      <div class="flex-1 overflow-y-auto p-6">
         <ProvidersTab
           v-if="activeTab === 'providers'"
           :providers="settingsStore.providers"
@@ -75,7 +75,25 @@
           @reset-advice="promptRules.resetOptimizationAdvicePrompt"
           @reset-application="promptRules.resetOptimizationApplicationPrompt"
           @toggle-slim-rules="promptRules.handleSlimRulesToggle"
+          @reset-user-prompt-quality-analysis="promptRules.resetUserPromptQualityAnalysis"
+          @reset-user-prompt-quick-optimization="promptRules.resetUserPromptQuickOptimization"
         />
+      </div>
+
+      <!-- 底部按钮 -->
+      <div class="flex justify-end space-x-3 p-4 border-t bg-gray-50 flex-shrink-0">
+        <button
+          @click="settingsStore.showSettings = false"
+          class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+        >
+          取消
+        </button>
+        <button
+          @click="promptRules.saveAndClose"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          保存设置
+        </button>
       </div>
     </div>
   </div>

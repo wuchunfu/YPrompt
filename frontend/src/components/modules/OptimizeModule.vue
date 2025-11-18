@@ -100,7 +100,7 @@ import { useOptimizeStore } from '@/stores/optimizeStore'
 import { AIService } from '@/services/aiService'
 import OptimizeSectionRedesign from './optimize/components/OptimizeSectionRedesign.vue'
 import DiffViewer from './optimize/components/DiffViewer.vue'
-import SettingsModal from '@/components/SettingsModal.vue'
+import SettingsModal from '@/components/settings/SettingsModal.vue'
 
 const route = useRoute()
 const settingsStore = useSettingsStore()

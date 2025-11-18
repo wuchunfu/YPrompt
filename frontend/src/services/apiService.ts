@@ -233,3 +233,48 @@ export async function deleteTag(id: number) {
   return del(`/api/tags/${id}`)
 }
 
+// ============ 提示词规则相关API ============
+
+export interface PromptRules {
+  id?: number
+  user_id?: number
+  system_prompt_rules?: string
+  user_guided_prompt_rules?: string
+  requirement_report_rules?: string
+  thinking_points_extraction_prompt?: string
+  thinking_points_system_message?: string
+  system_prompt_generation_prompt?: string
+  system_prompt_system_message?: string
+  optimization_advice_prompt?: string
+  optimization_advice_system_message?: string
+  optimization_application_prompt?: string
+  optimization_application_system_message?: string
+  quality_analysis_system_prompt?: string
+  user_prompt_quality_analysis?: string
+  user_prompt_quick_optimization?: string
+  user_prompt_rules?: string
+  create_time?: string
+  update_time?: string
+}
+
+/**
+ * 获取用户的提示词规则
+ */
+export async function getUserPromptRules() {
+  return get<{ code: number; data: PromptRules | null; message?: string }>('/api/prompt-rules')
+}
+
+/**
+ * 保存用户的提示词规则
+ */
+export async function saveUserPromptRules(rules: PromptRules) {
+  return post<{ code: number; data: PromptRules; message: string }>('/api/prompt-rules', rules)
+}
+
+/**
+ * 删除用户的提示词规则（重置为默认）
+ */
+export async function deleteUserPromptRules() {
+  return del<{ code: number; message: string }>('/api/prompt-rules')
+}
+

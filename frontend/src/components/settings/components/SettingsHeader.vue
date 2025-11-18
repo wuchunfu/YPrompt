@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-between p-6 border-b flex-shrink-0">
+  <div class="flex items-center justify-between mb-6">
     <div class="flex items-center space-x-4">
       <h2 class="text-xl font-semibold">设置</h2>
       <div class="flex space-x-1">

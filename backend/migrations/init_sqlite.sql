@@ -33,6 +33,42 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_auth_type ON users(auth_type);
 CREATE INDEX IF NOT EXISTS idx_is_active ON users(is_active);
 
+-- 用户提示词规则表
+CREATE TABLE IF NOT EXISTS user_prompt_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  
+  -- 提示词规则内容(JSON格式)
+  system_prompt_rules TEXT DEFAULT NULL,
+  user_guided_prompt_rules TEXT DEFAULT NULL,
+  requirement_report_rules TEXT DEFAULT NULL,
+  thinking_points_extraction_prompt TEXT DEFAULT NULL,
+  thinking_points_system_message TEXT DEFAULT NULL,
+  system_prompt_generation_prompt TEXT DEFAULT NULL,
+  system_prompt_system_message TEXT DEFAULT NULL,
+  optimization_advice_prompt TEXT DEFAULT NULL,
+  optimization_advice_system_message TEXT DEFAULT NULL,
+  optimization_application_prompt TEXT DEFAULT NULL,
+  optimization_application_system_message TEXT DEFAULT NULL,
+  quality_analysis_system_prompt TEXT DEFAULT NULL,
+  user_prompt_quality_analysis TEXT DEFAULT NULL,
+  user_prompt_quick_optimization TEXT DEFAULT NULL,
+  user_prompt_rules TEXT DEFAULT NULL,
+  
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_user_prompt_rules ON user_prompt_rules(user_id);
+CREATE TRIGGER IF NOT EXISTS update_user_prompt_rules_timestamp 
+AFTER UPDATE ON user_prompt_rules
+FOR EACH ROW
+BEGIN
+  UPDATE user_prompt_rules SET update_time = CURRENT_TIMESTAMP WHERE id = OLD.id;
+END;
+
 -- 提示词表
 CREATE TABLE IF NOT EXISTS prompts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

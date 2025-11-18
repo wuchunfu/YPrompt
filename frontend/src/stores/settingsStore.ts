@@ -230,7 +230,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   // 从本地存储加载设置
-  const loadSettings = () => {
+  const loadSettings = async () => {
     const savedProviders = localStorage.getItem('yprompt_providers')
     const savedProvider = localStorage.getItem('yprompt_selected_provider')
     const savedModel = localStorage.getItem('yprompt_selected_model')
@@ -334,6 +334,13 @@ export const useSettingsStore = defineStore('settings', () => {
         selectedModel.value = '' // 清空无效的模型选择
       }
     }
+
+    // 从云端加载提示词规则
+    try {
+      await promptConfigManager.loadFromCloud()
+    } catch (error) {
+      console.error('从云端加载提示词规则失败:', error)
+    }
   }
 
   // 删除提供商
@@ -425,22 +432,31 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  const savePromptRules = () => {
-    // 保存编辑后的提示词规则
-    promptConfigManager.updateSystemPromptRules(editingSystemRules.value)
-    promptConfigManager.updateUserGuidedPromptRules(editingUserRules.value)
-    promptConfigManager.updateRequirementReportRules(editingRequirementReportRules.value)
-    // 更新独立的最终提示词生成规则
-    promptConfigManager.updateThinkingPointsExtractionPrompt(editingFinalPromptRules.value.THINKING_POINTS_EXTRACTION)
-    promptConfigManager.updateSystemPromptGenerationPrompt(editingFinalPromptRules.value.SYSTEM_PROMPT_GENERATION)
-    promptConfigManager.updateOptimizationAdvicePrompt(editingFinalPromptRules.value.OPTIMIZATION_ADVICE_GENERATION)
-    promptConfigManager.updateOptimizationApplicationPrompt(editingFinalPromptRules.value.OPTIMIZATION_APPLICATION)
-    // 保存质量分析规则
-    promptConfigManager.updateQualityAnalysisSystemPrompt(editingQualityAnalysisRules.value.systemPrompt)
-    // 保存用户提示词优化规则
-    promptConfigManager.updateUserPromptQualityAnalysis(editingUserPromptOptimizationRules.value.qualityAnalysis)
-    promptConfigManager.updateUserPromptQuickOptimization(editingUserPromptOptimizationRules.value.quickOptimization)
-    closePromptEditor()
+  const savePromptRules = async () => {
+    try {
+      // 保存编辑后的提示词规则到本地
+      promptConfigManager.updateSystemPromptRules(editingSystemRules.value)
+      promptConfigManager.updateUserGuidedPromptRules(editingUserRules.value)
+      promptConfigManager.updateRequirementReportRules(editingRequirementReportRules.value)
+      // 更新独立的最终提示词生成规则
+      promptConfigManager.updateThinkingPointsExtractionPrompt(editingFinalPromptRules.value.THINKING_POINTS_EXTRACTION)
+      promptConfigManager.updateSystemPromptGenerationPrompt(editingFinalPromptRules.value.SYSTEM_PROMPT_GENERATION)
+      promptConfigManager.updateOptimizationAdvicePrompt(editingFinalPromptRules.value.OPTIMIZATION_ADVICE_GENERATION)
+      promptConfigManager.updateOptimizationApplicationPrompt(editingFinalPromptRules.value.OPTIMIZATION_APPLICATION)
+      // 保存质量分析规则
+      promptConfigManager.updateQualityAnalysisSystemPrompt(editingQualityAnalysisRules.value.systemPrompt)
+      // 保存用户提示词优化规则
+      promptConfigManager.updateUserPromptQualityAnalysis(editingUserPromptOptimizationRules.value.qualityAnalysis)
+      promptConfigManager.updateUserPromptQuickOptimization(editingUserPromptOptimizationRules.value.quickOptimization)
+      
+      // 保存到云端
+      await promptConfigManager.saveToCloud()
+      
+      closePromptEditor()
+    } catch (error) {
+      console.error('保存提示词规则失败:', error)
+      throw error
+    }
   }
 
   const resetSystemPromptRules = () => {

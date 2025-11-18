@@ -50,13 +50,18 @@ export function usePromptRules() {
     settingsStore.saveSettings()
   }
 
-  const saveAndClose = () => {
-    if (settingsStore.editingSystemRules || settingsStore.editingUserRules || 
-        settingsStore.editingRequirementReportRules || settingsStore.editingFinalPromptRules) {
-      settingsStore.savePromptRules()
+  const saveAndClose = async () => {
+    try {
+      if (settingsStore.editingSystemRules || settingsStore.editingUserRules || 
+          settingsStore.editingRequirementReportRules || settingsStore.editingFinalPromptRules) {
+        await settingsStore.savePromptRules()
+      }
+      settingsStore.saveSettings()
+      settingsStore.showSettings = false
+    } catch (error) {
+      console.error('保存设置失败:', error)
+      alert('保存失败，请检查网络连接后重试')
     }
-    settingsStore.saveSettings()
-    settingsStore.showSettings = false
   }
 
   const resetQualityAnalysisSystemPrompt = () => {

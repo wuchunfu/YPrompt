@@ -373,6 +373,78 @@ export class PromptConfigManager {
     }
   }
 
+  public async saveToCloud(): Promise<void> {
+    try {
+      const { saveUserPromptRules } = await import('@/services/apiService')
+      // 转换为后端需要的格式（下划线命名）
+      const cloudData = {
+        system_prompt_rules: this.config.systemPromptRules,
+        user_guided_prompt_rules: this.config.userGuidedPromptRules,
+        requirement_report_rules: this.config.requirementReportRules,
+        thinking_points_extraction_prompt: this.config.thinkingPointsExtractionPrompt,
+        thinking_points_system_message: this.config.thinkingPointsSystemMessage,
+        system_prompt_generation_prompt: this.config.systemPromptGenerationPrompt,
+        system_prompt_system_message: this.config.systemPromptSystemMessage,
+        optimization_advice_prompt: this.config.optimizationAdvicePrompt,
+        optimization_advice_system_message: this.config.optimizationAdviceSystemMessage,
+        optimization_application_prompt: this.config.optimizationApplicationPrompt,
+        optimization_application_system_message: this.config.optimizationApplicationSystemMessage,
+        quality_analysis_system_prompt: this.config.qualityAnalysisSystemPrompt,
+        user_prompt_quality_analysis: this.config.userPromptQualityAnalysis,
+        user_prompt_quick_optimization: this.config.userPromptQuickOptimization,
+        user_prompt_rules: this.config.userPromptRules
+      }
+      await saveUserPromptRules(cloudData)
+    } catch (error) {
+      console.error('保存到云端失败:', error)
+      throw error
+    }
+  }
+
+  public async loadFromCloud(): Promise<boolean> {
+    try {
+      const { getUserPromptRules } = await import('@/services/apiService')
+      const response = await getUserPromptRules()
+      
+      if (response.code === 200 && response.data) {
+        const cloudConfig = response.data
+        this.config = {
+          systemPromptRules: cloudConfig.system_prompt_rules || SYSTEM_PROMPT_RULES,
+          userGuidedPromptRules: cloudConfig.user_guided_prompt_rules || USER_GUIDED_PROMPT_RULES,
+          requirementReportRules: cloudConfig.requirement_report_rules || REQUIREMENT_REPORT_RULES,
+          thinkingPointsExtractionPrompt: cloudConfig.thinking_points_extraction_prompt || THINKING_POINTS_EXTRACTION_PROMPT,
+          thinkingPointsSystemMessage: cloudConfig.thinking_points_system_message || THINKING_POINTS_SYSTEM_MESSAGE,
+          systemPromptGenerationPrompt: cloudConfig.system_prompt_generation_prompt || SYSTEM_PROMPT_GENERATION_PROMPT,
+          systemPromptSystemMessage: cloudConfig.system_prompt_system_message || SYSTEM_PROMPT_SYSTEM_MESSAGE,
+          optimizationAdvicePrompt: cloudConfig.optimization_advice_prompt || OPTIMIZATION_ADVICE_PROMPT,
+          optimizationAdviceSystemMessage: cloudConfig.optimization_advice_system_message || OPTIMIZATION_ADVICE_SYSTEM_MESSAGE,
+          optimizationApplicationPrompt: cloudConfig.optimization_application_prompt || OPTIMIZATION_APPLICATION_PROMPT,
+          optimizationApplicationSystemMessage: cloudConfig.optimization_application_system_message || OPTIMIZATION_APPLICATION_SYSTEM_MESSAGE,
+          qualityAnalysisSystemPrompt: cloudConfig.quality_analysis_system_prompt || QUALITY_ANALYSIS_SYSTEM_PROMPT,
+          userPromptQualityAnalysis: cloudConfig.user_prompt_quality_analysis || USER_PROMPT_QUALITY_ANALYSIS,
+          userPromptQuickOptimization: cloudConfig.user_prompt_quick_optimization || USER_PROMPT_OPTIMIZATION_CONFIG.quick,
+          userPromptRules: cloudConfig.user_prompt_rules || USER_PROMPT_RULES
+        }
+        this.saveToStorage()
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('从云端加载失败:', error)
+      return false
+    }
+  }
+
+  public async deleteFromCloud(): Promise<void> {
+    try {
+      const { deleteUserPromptRules } = await import('@/services/apiService')
+      await deleteUserPromptRules()
+    } catch (error) {
+      console.error('删除云端配置失败:', error)
+      throw error
+    }
+  }
+
   private loadFromStorage(): void {
     try {
       const saved = localStorage.getItem('yprompt_config')
