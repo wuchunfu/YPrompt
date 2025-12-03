@@ -1,5 +1,5 @@
 import { BaseProvider } from './BaseProvider'
-import type { ChatMessage, AIResponse, StreamChunk, MessageContent } from '../types'
+import type { ChatMessage, AIResponse, StreamChunk, MessageContent, APICallParams } from '../types'
 import { AnthropicAttachmentHandler } from '../multimodal/AnthropicAttachmentHandler'
 import { ResponseCleaner } from '../utils/ResponseCleaner'
 
@@ -12,9 +12,10 @@ export class AnthropicProvider extends BaseProvider {
    * 调用 Anthropic API
    * @param messages 聊天消息列表
    * @param stream 是否使用流式响应
+   * @param params API 调用参数
    * @returns Promise<AIResponse | ReadableStream<Uint8Array>>
    */
-  async callAPI(messages: ChatMessage[], stream: boolean): Promise<AIResponse | ReadableStream<Uint8Array>> {
+  async callAPI(messages: ChatMessage[], stream: boolean, params?: APICallParams): Promise<AIResponse | ReadableStream<Uint8Array>> {
     // 分离系统消息和对话消息
     const systemMessage = this.extractSystemMessageText(messages)
     const conversationMessages = messages.filter(m => m.role !== 'system')
@@ -46,7 +47,10 @@ export class AnthropicProvider extends BaseProvider {
       },
       body: JSON.stringify({
         model: modelId,
-        max_tokens: 60000,
+        max_tokens: params?.maxTokens ?? 8192,
+        temperature: params?.temperature ?? 1.0,
+        top_p: params?.topP ?? 0.95,
+        ...(params?.topK !== undefined && params.topK > 0 && { top_k: params.topK }),
         system: systemMessage,
         messages: conversationMessages.map(msg => ({
           role: msg.role === 'assistant' ? 'assistant' : 'user',

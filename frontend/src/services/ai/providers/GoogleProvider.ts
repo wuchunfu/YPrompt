@@ -1,5 +1,5 @@
 import { BaseProvider } from './BaseProvider'
-import type { ChatMessage, AIResponse, StreamChunk } from '../types'
+import type { ChatMessage, AIResponse, StreamChunk, APICallParams } from '../types'
 import { GoogleAttachmentHandler } from '../multimodal/GoogleAttachmentHandler'
 import { ResponseCleaner } from '../utils/ResponseCleaner'
 
@@ -12,9 +12,10 @@ export class GoogleProvider extends BaseProvider {
    * 调用 Google Gemini API
    * @param messages 聊天消息列表
    * @param stream 是否使用流式响应
+   * @param params API 调用参数
    * @returns Promise<AIResponse | ReadableStream<Uint8Array>>
    */
-  async callAPI(messages: ChatMessage[], stream: boolean): Promise<AIResponse | ReadableStream<Uint8Array>> {
+  async callAPI(messages: ChatMessage[], stream: boolean, params?: APICallParams): Promise<AIResponse | ReadableStream<Uint8Array>> {
     
     // Google Gemini API格式转换
     const systemMessage = this.extractSystemMessageText(messages)
@@ -36,7 +37,10 @@ export class GoogleProvider extends BaseProvider {
     const requestBody: any = {
       contents,
       generationConfig: {
-        temperature: 0.7
+        temperature: params?.temperature ?? 1.0,
+        maxOutputTokens: params?.maxTokens ?? 8192,
+        topP: params?.topP ?? 0.95,
+        ...(params?.topK !== undefined && params.topK > 0 && { topK: params.topK })
       }
     }
 

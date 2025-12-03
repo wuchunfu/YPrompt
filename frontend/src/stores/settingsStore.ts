@@ -14,6 +14,9 @@ export interface ModelConfig {
   capabilities?: ModelCapabilities
   lastTested?: Date
   testStatus?: 'untested' | 'testing' | 'success' | 'failed'
+  
+  // 模型参数配置
+  params?: ModelParams
 }
 
 export interface ModelCapabilities {
@@ -28,6 +31,21 @@ export type ReasoningType =
   | 'gemini-thought'      // Gemini thought字段
   | 'claude-thinking'     // Claude thinking标签
   | 'generic-cot'         // 通用链式思考
+
+// 模型参数配置
+export interface ModelParams {
+  // 通用参数
+  temperature?: number
+  maxTokens?: number
+  topP?: number
+  
+  // OpenAI 特有参数
+  frequencyPenalty?: number
+  presencePenalty?: number
+  
+  // Claude/Gemini 特有参数
+  topK?: number
+}
 
 export interface SupportedParams {
   temperature: boolean                  // 是否支持temperature参数

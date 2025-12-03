@@ -22,6 +22,17 @@
               AI模型
             </button>
             <button
+              @click="activeTab = 'params'"
+              :class="[
+                'px-3 py-1 rounded text-sm font-medium transition-colors',
+                activeTab === 'params' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-600 hover:text-gray-800'
+              ]"
+            >
+              模型参数
+            </button>
+            <button
               @click="activeTab = 'prompts'"
               :class="[
                 'px-3 py-1 rounded text-sm font-medium transition-colors',
@@ -63,6 +74,8 @@
           :get-api-type-color="modelMgmt.getApiTypeColor"
           :get-api-type-label="modelMgmt.getApiTypeLabel"
         />
+
+        <ModelParamsTab v-if="activeTab === 'params'" />
 
         <PromptsTab
           v-if="activeTab === 'prompts'"
@@ -146,13 +159,14 @@ import { usePromptRules } from '@/components/settings/composables/usePromptRules
 
 import SettingsButton from '@/components/settings/components/SettingsButton.vue'
 import ProvidersTab from '@/components/settings/components/tabs/ProvidersTab.vue'
+import ModelParamsTab from '@/components/settings/components/tabs/ModelParamsTab.vue'
 import PromptsTab from '@/components/settings/components/tabs/PromptsTab.vue'
 import ProviderTypeDialog from '@/components/settings/components/dialogs/ProviderTypeDialog.vue'
 import ProviderDialog from '@/components/settings/components/dialogs/ProviderDialog.vue'
 import ModelDialog from '@/components/settings/components/dialogs/ModelDialog.vue'
 
 const settingsStore = useSettingsStore()
-const activeTab = ref<'providers' | 'prompts'>('providers')
+const activeTab = ref<'providers' | 'params' | 'prompts'>('providers')
 
 // Composables
 const modelTesting = useModelTesting()

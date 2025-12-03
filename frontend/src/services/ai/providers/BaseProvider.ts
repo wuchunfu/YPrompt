@@ -1,4 +1,4 @@
-import type { ChatMessage, AIResponse, ProviderConfig, StreamChunk } from '../types'
+import type { ChatMessage, AIResponse, ProviderConfig, StreamChunk, APICallParams } from '../types'
 
 /**
  * AI 提供商基础抽象类
@@ -17,9 +17,10 @@ export abstract class BaseProvider {
    * 调用 AI API
    * @param messages 聊天消息列表
    * @param stream 是否使用流式响应
+   * @param params API 调用参数（temperature, maxTokens 等）
    * @returns Promise<AIResponse | ReadableStream<Uint8Array>>
    */
-  abstract callAPI(messages: ChatMessage[], stream: boolean): Promise<AIResponse | ReadableStream<Uint8Array>>
+  abstract callAPI(messages: ChatMessage[], stream: boolean, params?: APICallParams): Promise<AIResponse | ReadableStream<Uint8Array>>
 
   /**
    * 解析流式响应块

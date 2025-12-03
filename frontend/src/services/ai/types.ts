@@ -44,3 +44,13 @@ export interface AIProviderOptions {
   maxTokens?: number
   timeout?: number
 }
+
+// API 调用参数（从 ModelParams 传入）
+export interface APICallParams {
+  temperature?: number
+  maxTokens?: number
+  topP?: number
+  frequencyPenalty?: number
+  presencePenalty?: number
+  topK?: number
+}

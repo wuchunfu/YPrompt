@@ -14,3 +14,4 @@ export { ModelFetcher } from './utils/ModelFetcher'
 export { ResponseCleaner } from './utils/ResponseCleaner'
 
 export * from './types'
+export type { APICallParams } from './types'

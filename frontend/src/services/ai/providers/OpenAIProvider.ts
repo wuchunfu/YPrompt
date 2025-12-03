@@ -1,5 +1,5 @@
 import { BaseProvider } from './BaseProvider'
-import type { ChatMessage, AIResponse, StreamChunk, MessageContent } from '../types'
+import type { ChatMessage, AIResponse, StreamChunk, MessageContent, APICallParams } from '../types'
 import { OpenAIAttachmentHandler } from '../multimodal/OpenAIAttachmentHandler'
 import { ResponseCleaner } from '../utils/ResponseCleaner'
 
@@ -12,9 +12,10 @@ export class OpenAIProvider extends BaseProvider {
    * 调用 OpenAI API
    * @param messages 聊天消息列表
    * @param stream 是否使用流式响应
+   * @param params API 调用参数
    * @returns Promise<AIResponse | ReadableStream<Uint8Array>>
    */
-  async callAPI(messages: ChatMessage[], stream: boolean): Promise<AIResponse | ReadableStream<Uint8Array>> {
+  async callAPI(messages: ChatMessage[], stream: boolean, params?: APICallParams): Promise<AIResponse | ReadableStream<Uint8Array>> {
     // 构建OpenAI API URL - 智能处理基础URL和完整URL
     if (!this.config.baseUrl) {
       throw new Error('API URL 未配置')
@@ -61,8 +62,11 @@ export class OpenAIProvider extends BaseProvider {
             }
           }
         }),
-        temperature: 0.7,
-        max_tokens: 60000,
+        temperature: params?.temperature ?? 1.0,
+        max_tokens: params?.maxTokens ?? 8192,
+        top_p: params?.topP ?? 0.95,
+        ...(params?.frequencyPenalty !== undefined && { frequency_penalty: params.frequencyPenalty }),
+        ...(params?.presencePenalty !== undefined && { presence_penalty: params.presencePenalty }),
         ...(stream && { stream: true })
       })
     }, timeoutMs)

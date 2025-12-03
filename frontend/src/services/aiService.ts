@@ -10,7 +10,8 @@ import {
   ResponseCleaner,
   type ChatMessage as AIChatMessage,
   type BaseProvider,
-  type MessageContent
+  type MessageContent,
+  type APICallParams
 } from './ai'
 
 export type { MessageContent } from './ai/types'
@@ -97,14 +98,25 @@ export class AIService {
     const model = provider.models.find(m => m.id === modelId)
     const apiType = model?.apiType || provider.type
 
+    // 获取模型参数配置
+    const modelParams = model?.params
+    const apiParams: APICallParams | undefined = modelParams ? {
+      temperature: modelParams.temperature,
+      maxTokens: modelParams.maxTokens,
+      topP: modelParams.topP,
+      frequencyPenalty: modelParams.frequencyPenalty,
+      presencePenalty: modelParams.presencePenalty,
+      topK: modelParams.topK
+    } : undefined
+
     try {
       const convertedMessages = this.convertMessagesToAI(messages)
       const providerInstance = this.getProvider(provider, modelId)
 
       if (stream) {
-        return await this.callWithStream(providerInstance, convertedMessages, streamCallback)
+        return await this.callWithStream(providerInstance, convertedMessages, apiParams, streamCallback)
       } else {
-        const response = await providerInstance.callAPI(convertedMessages, false)
+        const response = await providerInstance.callAPI(convertedMessages, false, apiParams)
         if (typeof response !== 'object' || !('content' in response)) {
           throw new Error('Expected AIResponse object')
         }
@@ -122,6 +134,7 @@ export class AIService {
   private async callWithStream(
     provider: BaseProvider, 
     messages: AIChatMessage[],
+    params: APICallParams | undefined,
     streamCallback?: (chunk: string) => void
   ): Promise<string> {
     // 优先使用传入的回调，其次使用全局回调
@@ -129,7 +142,7 @@ export class AIService {
     const hasGlobalCallback = !!this.onStreamUpdate
 
     try {
-      const stream = await provider.callAPI(messages, true)
+      const stream = await provider.callAPI(messages, true, params)
       if (typeof stream === 'string' || !('getReader' in stream)) {
         throw new Error('Expected ReadableStream for streaming')
       }
