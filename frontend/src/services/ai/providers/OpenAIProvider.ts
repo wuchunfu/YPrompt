@@ -1,5 +1,6 @@
 import { BaseProvider } from './BaseProvider'
-import type { ChatMessage, AIResponse, StreamChunk, MessageContent, APICallParams } from '../types'
+import type { ChatMessage, AIResponse, StreamChunk, MessageContent, APICallParams, ProviderConfig } from '../types'
+import type { ModelConfig } from '@/stores/settingsStore'
 import { OpenAIAttachmentHandler } from '../multimodal/OpenAIAttachmentHandler'
 import { ResponseCleaner } from '../utils/ResponseCleaner'
 
@@ -8,6 +9,15 @@ import { ResponseCleaner } from '../utils/ResponseCleaner'
  * 支持 GPT 系列模型和多模态内容
  */
 export class OpenAIProvider extends BaseProvider {
+  private maxTokensParamName: 'max_tokens' | 'max_completion_tokens'
+  private modelConfig?: ModelConfig
+
+  constructor(config: ProviderConfig, modelId: string) {
+    super(config, modelId)
+    this.modelConfig = this.config.models?.find(model => model.id === modelId)
+    this.maxTokensParamName = this.resolveInitialMaxTokensParam()
+  }
+
   /**
    * 调用 OpenAI API
    * @param messages 聊天消息列表
@@ -39,88 +49,156 @@ export class OpenAIProvider extends BaseProvider {
     const isThinkingModel = modelId.includes('gpt-5') || modelId.includes('o1') || modelId.includes('thinking')
     const timeoutMs = isThinkingModel ? 600000 : 300000 // 思考模型10分钟，普通模型5分钟
     
-    const response = await this.fetchWithTimeout(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: messages.map(msg => {
-          // 检查是否有多模态内容
-          if (this.hasMultimodalContent(msg)) {
-            const multimodalContent = this.convertToMultimodalContent(msg)
-            return {
-              role: msg.role,
-              content: multimodalContent
-            }
-          } else {
-            return {
-              role: msg.role,
-              content: typeof msg.content === 'string' ? msg.content : msg.content[0]?.text || ''
+    let currentMaxTokensParam = this.maxTokensParamName
+    while (true) {
+      const response = await this.fetchWithTimeout(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.config.apiKey}`
+        },
+        body: JSON.stringify(
+          this.buildRequestBody(messages, stream, params, currentMaxTokensParam)
+        )
+      }, timeoutMs)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        if (this.shouldRetryWithCompletionTokens(errorData, currentMaxTokensParam)) {
+          currentMaxTokensParam = 'max_completion_tokens'
+          this.maxTokensParamName = 'max_completion_tokens'
+          continue
+        }
+
+        const error = new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
+        ;(error as any).error = errorData
+        ;(error as any).status = response.status
+        throw error
+      }
+
+      this.maxTokensParamName = currentMaxTokensParam
+
+      if (stream) {
+        return response.body as ReadableStream<Uint8Array>
+      } else {
+        const data = await response.json()
+        
+        // 支持多种API响应格式的内容提取
+        let result: string | undefined
+        
+        if (data.choices && data.choices[0]?.message?.content) {
+          // OpenAI 格式: {choices: [{message: {content: "text"}}]}
+          result = data.choices[0].message.content
+        } else if (data.candidates && data.candidates[0]?.content?.parts) {
+          // Gemini 格式: {candidates: [{content: {parts: [{text: "text"}]}}]}
+          const parts = data.candidates[0].content.parts
+          // 查找包含text的部分（过滤掉thought等）
+          for (const part of parts) {
+            if (part.text && !part.thought) {
+              result = part.text
+              break
             }
           }
-        }),
-        temperature: params?.temperature ?? 1.0,
-        max_tokens: params?.maxTokens ?? 8192,
-        top_p: params?.topP ?? 0.95,
-        ...(params?.frequencyPenalty !== undefined && { frequency_penalty: params.frequencyPenalty }),
-        ...(params?.presencePenalty !== undefined && { presence_penalty: params.presencePenalty }),
-        ...(stream && { stream: true })
-      })
-    }, timeoutMs)
+        } else if (data.content && typeof data.content === 'string') {
+          // 直接返回内容格式
+          result = data.content
+        } else if (data.text && typeof data.text === 'string') {
+          // 简单文本格式
+          result = data.text
+        }
+        
+        if (!result || result.trim() === '') {
+          throw new Error('API返回空内容或无法解析响应格式')
+        }
+        
+        // 清理响应内容
+        result = ResponseCleaner.cleanResponse(result)
+        result = ResponseCleaner.cleanThinkTags(result)
+        
+        return {
+          content: result,
+          finishReason: data.choices?.[0]?.finish_reason
+        }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      const error = new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
-      ;(error as any).error = errorData
-      ;(error as any).status = response.status
-      throw error
+      }
     }
+  }
 
-    if (stream) {
-      return response.body as ReadableStream<Uint8Array>
-    } else {
-      const data = await response.json()
-      
-      // 支持多种API响应格式的内容提取
-      let result: string | undefined
-      
-      if (data.choices && data.choices[0]?.message?.content) {
-        // OpenAI 格式: {choices: [{message: {content: "text"}}]}
-        result = data.choices[0].message.content
-      } else if (data.candidates && data.candidates[0]?.content?.parts) {
-        // Gemini 格式: {candidates: [{content: {parts: [{text: "text"}]}}]}
-        const parts = data.candidates[0].content.parts
-        // 查找包含text的部分（过滤掉thought等）
-        for (const part of parts) {
-          if (part.text && !part.thought) {
-            result = part.text
-            break
+  private buildRequestBody(
+    messages: ChatMessage[],
+    stream: boolean,
+    params: APICallParams | undefined,
+    maxTokensParam: 'max_tokens' | 'max_completion_tokens'
+  ) {
+    const requestBody: Record<string, any> = {
+      model: this.modelId,
+      messages: messages.map(msg => {
+        if (this.hasMultimodalContent(msg)) {
+          const multimodalContent = this.convertToMultimodalContent(msg)
+          return {
+            role: msg.role,
+            content: multimodalContent
+          }
+        } else {
+          return {
+            role: msg.role,
+            content: typeof msg.content === 'string' ? msg.content : msg.content[0]?.text || ''
           }
         }
-      } else if (data.content && typeof data.content === 'string') {
-        // 直接返回内容格式
-        result = data.content
-      } else if (data.text && typeof data.text === 'string') {
-        // 简单文本格式
-        result = data.text
-      }
-      
-      if (!result || result.trim() === '') {
-        throw new Error('API返回空内容或无法解析响应格式')
-      }
-      
-      // 清理响应内容
-      result = ResponseCleaner.cleanResponse(result)
-      result = ResponseCleaner.cleanThinkTags(result)
-      
-      return {
-        content: result,
-        finishReason: data.choices?.[0]?.finish_reason
-      }
+      }),
+      temperature: params?.temperature ?? 1.0,
+      top_p: params?.topP ?? 0.95,
+      ...(params?.frequencyPenalty !== undefined && { frequency_penalty: params.frequencyPenalty }),
+      ...(params?.presencePenalty !== undefined && { presence_penalty: params.presencePenalty }),
+      ...(stream && { stream: true })
     }
+
+    const maxTokensValue = params?.maxTokens ?? 8192
+    if (maxTokensValue !== undefined) {
+      requestBody[maxTokensParam] = maxTokensValue
+    }
+
+    return requestBody
+  }
+
+  private resolveInitialMaxTokensParam(): 'max_tokens' | 'max_completion_tokens' {
+    const configuredParam = this.modelConfig?.capabilities?.supportedParams.maxTokens
+    if (configuredParam) {
+      return configuredParam
+    }
+    
+    return this.requiresCompletionTokens(this.modelId) ? 'max_completion_tokens' : 'max_tokens'
+  }
+
+  private shouldRetryWithCompletionTokens(
+    errorData: any,
+    currentParam: 'max_tokens' | 'max_completion_tokens'
+  ): boolean {
+    if (currentParam === 'max_completion_tokens') {
+      return false
+    }
+
+    const errorInfo = errorData?.error
+    if (!errorInfo) {
+      return false
+    }
+
+    const message = typeof errorInfo.message === 'string' ? errorInfo.message.toLowerCase() : ''
+    if (!message) {
+      return false
+    }
+
+    const isUnsupportedParam = errorInfo.code === 'unsupported_parameter' || message.includes('unsupported parameter')
+    const referencesTokens = message.includes('max_tokens') && message.includes('max_completion_tokens')
+    const isMaxTokensParam = !errorInfo.param || errorInfo.param === 'max_tokens'
+
+    return isUnsupportedParam && referencesTokens && isMaxTokensParam
+  }
+
+  private requiresCompletionTokens(modelId: string): boolean {
+    const normalized = modelId.toLowerCase()
+    const keywords = ['gpt-5', 'o1', 'o3', 'o4', 'reasoning']
+    return keywords.some(keyword => normalized.includes(keyword))
   }
 
   /**

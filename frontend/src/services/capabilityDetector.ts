@@ -322,13 +322,14 @@ export class CapabilityDetector {
       // 常规OpenAI模型的思考能力测试
       const response = await this.callOpenAIWithThinkingInstructions(provider, modelId, testMessage, preferStream)
       const hasThinking = this.detectThinkingInResponse(response, 'openai')
+      const needsCompletionTokens = this.requiresMaxCompletionTokens(modelId)
       
       return {
         reasoning: hasThinking,
         reasoningType: hasThinking ? 'generic-cot' : null,
         supportedParams: {
           temperature: true,
-          maxTokens: 'max_tokens',
+          maxTokens: needsCompletionTokens ? 'max_completion_tokens' : 'max_tokens',
           streaming: true,
           systemMessage: true
         }
@@ -465,6 +466,12 @@ export class CapabilityDetector {
 
   private isO1Model(modelId: string): boolean {
     return modelId.toLowerCase().includes('o1')
+  }
+
+  private requiresMaxCompletionTokens(modelId: string): boolean {
+    const normalized = modelId.toLowerCase()
+    const keywords = ['gpt-5', 'o1', 'o3', 'o4', 'reasoning']
+    return keywords.some(keyword => normalized.includes(keyword))
   }
 
   private isClaudeThinkingModel(modelId: string): boolean {

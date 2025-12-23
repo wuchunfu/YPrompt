@@ -33,6 +33,25 @@ export function useModelParams() {
     return defaults
   }
 
+  const getMaxTokensParamName = () => {
+    const configured = currentModel.value?.capabilities?.supportedParams.maxTokens
+    if (configured) return configured
+
+    const modelId = currentModel.value?.id?.toLowerCase() || ''
+    const keywords = ['gpt-5', 'o1', 'o3', 'o4', 'reasoning']
+    return keywords.some(keyword => modelId.includes(keyword)) ? 'max_completion_tokens' : 'max_tokens'
+  }
+
+  const maxTokensLabel = computed(() => 
+    getMaxTokensParamName() === 'max_completion_tokens' ? 'Max Completion Tokens' : 'Max Tokens'
+  )
+
+  const maxTokensDescription = computed(() => 
+    getMaxTokensParamName() === 'max_completion_tokens'
+      ? '生成的最大 completion token 数量'
+      : '生成的最大 token 数量'
+  )
+
   // 获取当前模型的参数（如果没有则返回默认值）
   const getCurrentParams = (): ModelParams => {
     if (!currentModel.value) {
@@ -123,9 +142,12 @@ export function useModelParams() {
 
   // 获取参数的显示名称
   const getParamLabel = (paramName: keyof ModelParams): string => {
+    if (paramName === 'maxTokens') {
+      return maxTokensLabel.value
+    }
+
     const labels: Record<string, string> = {
       temperature: 'Temperature',
-      maxTokens: 'Max Tokens',
       topP: 'Top P',
       frequencyPenalty: 'Frequency Penalty',
       presencePenalty: 'Presence Penalty',
@@ -136,9 +158,12 @@ export function useModelParams() {
 
   // 获取参数的描述
   const getParamDescription = (paramName: keyof ModelParams): string => {
+    if (paramName === 'maxTokens') {
+      return maxTokensDescription.value
+    }
+
     const descriptions: Record<string, string> = {
       temperature: '控制输出的随机性。值越高，输出越随机；值越低，输出越确定',
-      maxTokens: '生成的最大 token 数量',
       topP: '核采样参数，控制考虑的词汇范围',
       frequencyPenalty: '降低重复词汇的频率（OpenAI 专用）',
       presencePenalty: '鼓励模型谈论新话题（OpenAI 专用）',
